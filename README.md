@@ -17,6 +17,7 @@
 
 ## 功能特性
 
+- **复古数码管**：DSEG7 七段字体、幽灵笔画、闪烁方形冒号；数字按字形原点对齐，「1」显示在右侧，与真实数码管一致
 - **空闲自动触发**：X11 空闲 60 秒后启动（用 `xprintidle` 计时）
 - **点击退出**：窗口有 2 秒启动宽限期，避免触摸残留事件导致秒退
 - **多屏保共存**：桌面图标可手动进入任意一种，或随机一种；切换时自动结束旧实例
@@ -75,7 +76,11 @@ nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 | `WB_IDLE_SAVER` | `flip` | 自动触发时使用哪个屏保：`flip` / `matrix` / `stars` |
 | `WB_FONT` | DSEG7 Classic Bold | 时钟字体文件路径。默认 `/usr/share/fonts/truetype/dseg7-classic/dseg7-classic-latin-700-normal.ttf`（七段数码管）；原 Quicksand 字体仍作为回退 |
 | `WB_COLOR` | `#FFA42B` | 数字颜色（琥珀色）。接受 `#RRGGBB` 或 `#RGB`，如 `#4AF626` 磷光绿、`#E8E8E8` 冷白 |
-| `WB_BRIGHTNESS` | `85` | 亮度百分比 0-100，按比例缩放颜色，默认 85% 柔和不刺眼 |
+| `WB_BRIGHTNESS` | `85` | 白天亮度百分比 0-100，按比例缩放颜色，默认 85% 柔和不刺眼 |
+| `WB_NIGHT_MODE` | `1` | 夜间模式开关，设 `0` 完全关闭 |
+| `WB_NIGHT_START` | `22:00` | 夜间开始时间（24 小时制） |
+| `WB_NIGHT_END` | `07:00` | 夜间结束时间，可跨午夜（如 `22:00` → `06:30`） |
+| `WB_NIGHT_BRIGHTNESS` | `50` | 夜间亮度百分比，默认 50%；只影响点亮的笔画，幽灵笔画保持不变 |
 | `WB_GHOST_COLOR` | `#2A1400` | 未点亮笔画的暗底色（幽灵笔画）。设 `off` / `0` 关闭 |
 | `WB_AFTERGLOW` | `0` | 设 `1` 开启 CRT 余辉：熄灭的笔画渐隐而非瞬间消失 |
 | `WB_AFTERGLOW_MS` | `700` | 余辉持续时间（毫秒），仅当 `WB_AFTERGLOW=1` 时有效 |
@@ -89,6 +94,15 @@ nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 ```bash
 WB_IDLE_MS=30000 WB_IDLE_SAVER=matrix nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 ```
+
+例：夜间模式改为 23:30–06:15，亮度 35%：
+
+```bash
+WB_NIGHT_START=23:30 WB_NIGHT_END=06:15 WB_NIGHT_BRIGHTNESS=35 \
+  nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
+```
+
+夜间模式在运行时持续检查时间，屏保跨过 22:00 / 07:00 边界会自动切换配色，无需重启。切换记录写入 `screensaver.log`。
 
 ## 文件结构
 
@@ -110,6 +124,8 @@ wb-screensaver/
 - X11 自带的 screen blanking / DPMS 会关闭 SPI 屏，因此守护进程启动时会执行 `xset s off`、`xset s noblank`、`xset -dpms` 关闭它们，由本程序接管屏幕。
 - 用 `/tmp/wb-screensaver-active` 标记文件记录当前屏保进程 PID，保证同时只有一个屏保实例运行。
 - 一切基于 X11（`SDL_VIDEODRIVER=x11`），不直接写 framebuffer，因此与桌面环境共存。
+- 七段字体的「1」字形原点在单元格右侧、宽度只有其他数字的 1/5。程序读取 freetype 返回的 glyph rect，把 0-9 统一绘制到同一个单元格里，因此「1」落在右侧竖段位置，而不是贴着左边。
+- 夜间模式只缩放点亮笔画的颜色，幽灵笔画亮度固定；时间区间跨越午夜时按「大于等于开始，或小于结束」判断。
 
 ## License
 

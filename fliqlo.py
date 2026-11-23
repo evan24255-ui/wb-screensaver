@@ -58,9 +58,36 @@ def env_int(name, default, minimum=None):
     return max(minimum, value) if minimum is not None else value
 
 
+def parse_hhmm(value, default):
+    """Parse HH:MM into minutes since midnight; fall back on bad input."""
+    try:
+        hour, minute = (int(part) for part in value.strip().split(":"))
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            return hour * 60 + minute
+    except (ValueError, AttributeError):
+        pass
+    return default
+
+
+def night_active(start_min, end_min, now=None):
+    """True inside [start, end); supports ranges that wrap past midnight."""
+    now = now or datetime.datetime.now()
+    minute = now.hour * 60 + now.minute
+    if start_min == end_min:
+        return False
+    if start_min < end_min:
+        return start_min <= minute < end_min
+    return minute >= start_min or minute < end_min
+
+
 # Configured in main() before any glyph surfaces are rendered.
 FG = (255, 164, 43)
 GHOST = (42, 20, 0)
+
+# All digits share one cell, aligned by the font's own glyph origin. Narrow
+# glyphs such as "1" then sit on the right, exactly like a real 7-segment LED.
+glyph_cell = None
+glyph_offsets = {}
 
 
 def log(message):
@@ -79,9 +106,32 @@ def load_font(size):
     return pygame.freetype.SysFont("sans-serif", size)
 
 
+def build_glyph_layout(font):
+    """Derive one common cell from every digit's freetype glyph rect.
+
+    font.render() returns a tightly cropped surface plus a rect describing
+    where the ink sits relative to the glyph origin. Dropping that rect makes
+    DSEG7's "1" (origin x=88, width 20) hug the left edge instead of occupying
+    the right-hand segments as a real seven-segment display does.
+    """
+    global glyph_cell, glyph_offsets
+    rects = {ch: font.render(ch, FG)[1] for ch in "0123456789"}
+    x0 = min(r[0] for r in rects.values())
+    y0 = min(r[1] for r in rects.values())
+    width = max(r[0] + r[2] for r in rects.values()) - x0
+    height = max(r[1] + r[3] for r in rects.values()) - y0
+    glyph_cell = (width, height)
+    glyph_offsets = {ch: (r[0] - x0, r[1] - y0) for ch, r in rects.items()}
+
+
 def render_digit(font, char, color=None):
-    surface, _ = font.render(char, FG if color is None else color)
-    return surface
+    """Render one digit into the shared cell, honouring its glyph origin."""
+    glyph = font.render(char, FG if color is None else color)[0]
+    if glyph_cell is None:
+        return glyph
+    cell = pygame.Surface(glyph_cell, pygame.SRCALPHA)
+    cell.blit(glyph, glyph_offsets.get(char, (0, 0)))
+    return cell
 
 
 def split_halves(surface):
@@ -186,8 +236,14 @@ def main():
 
     # Colour configuration. Defaults give a soft amber vintage LED look.
     base = parse_color(os.environ.get("WB_COLOR", "#FFA42B"), (255, 164, 43))
-    brightness = env_int("WB_BRIGHTNESS", 85)
-    FG = apply_brightness(base, brightness)
+    day_brightness = env_int("WB_BRIGHTNESS", 85)
+    night_brightness = env_int("WB_NIGHT_BRIGHTNESS", 50)
+    night_enabled = os.environ.get("WB_NIGHT_MODE", "1") != "0"
+    night_start = parse_hhmm(os.environ.get("WB_NIGHT_START", "22:00"), 22 * 60)
+    night_end = parse_hhmm(os.environ.get("WB_NIGHT_END", "07:00"), 7 * 60)
+    period = "night" if night_enabled and night_active(night_start, night_end) else "day"
+    active_brightness = night_brightness if period == "night" else day_brightness
+    FG = apply_brightness(base, active_brightness)
     ghost_value = os.environ.get("WB_GHOST_COLOR", "#2A1400")
     GHOST = None if ghost_value.lower() in ("off", "0", "none") else parse_color(
         ghost_value, (42, 20, 0)
@@ -208,15 +264,15 @@ def main():
 
     width, height = screen.get_size()
     pygame.mouse.set_visible(False)
-    log("started %dx%d fg=%s ghost=%s brightness=%d afterglow=%s" % (
-        width, height, FG, GHOST, brightness, afterglow_on
+    log("started %dx%d fg=%s ghost=%s period=%s brightness=%d afterglow=%s" % (
+        width, height, FG, GHOST, period, active_brightness, afterglow_on
     ))
 
     font_size = int(height * 0.48)
     while True:
         font_store = load_font(font_size)
-        sample, _ = font_store.render("8", FG)
-        digit_w, digit_h = sample.get_size()
+        build_glyph_layout(font_store)
+        digit_w, digit_h = glyph_cell
         card_w = digit_w + 18
         card_h = digit_h + 16
         gap = max(5, int(width * 0.015))
@@ -251,6 +307,26 @@ def main():
 
     while running:
         now = time.monotonic()
+
+        # Re-evaluate every frame so a boundary crossed mid-session takes
+        # effect immediately (e.g. left running across 22:00 or 07:00).
+        new_period = (
+            "night" if night_enabled and night_active(night_start, night_end) else "day"
+        )
+        if new_period != period:
+            period = new_period
+            active_brightness = (
+                night_brightness if period == "night" else day_brightness
+            )
+            FG = apply_brightness(base, active_brightness)
+            # Cached glyphs were tinted with the old colour; rebuild them.
+            digit_cache.clear()
+            ghost_cache.clear()
+            for ch in "0123456789":
+                render_digit_cache(ch, font_store)
+            render_ghost_cache(font_store)
+            redraw = True
+            log("period -> %s fg=%s brightness=%d" % (period, FG, active_brightness))
 
         blink_on = (not blink_enabled) or (int(now * 1000) // blink_ms) % 2 == 0
         if blink_on != was_blink_on:
