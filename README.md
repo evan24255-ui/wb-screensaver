@@ -11,7 +11,7 @@
 
 | 屏保 | 说明 |
 |---|---|
-| 翻页时钟（Fliqlo 风格） | 黑底数码管字、翻页动画、中央分割线与冒号，数字自动走时（默认 DSEG7 七段字体） |
+| 翻页时钟（Fliqlo 风格） | 黑底数码管字、翻页动画、中央分割线与闪烁方形冒号，数字自动走时（默认 DSEG7 七段字体） |
 | 数字雨（Matrix） | 绿色字符流下落 |
 | 星空（Stars） | 缓慢漂移的星点 |
 
@@ -76,6 +76,8 @@ nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 | `WB_FONT` | DSEG7 Classic Bold | 时钟字体文件路径。默认 `/usr/share/fonts/truetype/dseg7-classic/dseg7-classic-latin-700-normal.ttf`（七段数码管）；原 Quicksand 字体仍作为回退 |
 | `WB_DEBUG` | 空 | 设任意值开启时钟调试日志 |
 | `WB_SNAP` | 空 | 设任意值时启动 3 秒后保存渲染快照到 `/tmp/wb_snap.png` |
+| `WB_BLINK` | `1` | 设 `0` 关闭时钟冒号闪烁（常亮） |
+| `WB_BLINK_MS` | `1000` | 冒号闪烁半周期（毫秒），默认 1 秒亮 / 1 秒灭 |
 
 例：改成 30 秒触发数字雨：
 

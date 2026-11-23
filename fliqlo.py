@@ -165,8 +165,24 @@ def main():
     was_animating = False
     clock_tick = pygame.time.Clock()
 
+    # Colon blink: honour WB_BLINK=0 to disable, WB_BLINK_MS for the half-period.
+    blink_enabled = os.environ.get("WB_BLINK", "1") != "0"
+    try:
+        blink_ms = int(os.environ.get("WB_BLINK_MS", "1000"))
+    except ValueError:
+        blink_ms = 1000
+    blink_ms = max(100, blink_ms)
+    was_blink_on = True
+
     while running:
         now = time.monotonic()
+
+        # Square colon dots blink by toggling between the foreground and
+        # background colour; force one redraw on each state change only.
+        blink_on = (not blink_enabled) or (int(now * 1000) // blink_ms) % 2 == 0
+        if blink_on != was_blink_on:
+            redraw = True
+        was_blink_on = blink_on
 
         for event in pygame.event.get():
             if now - start_time < GRACE_SECONDS:
@@ -216,12 +232,24 @@ def main():
 
                 if index == 1:
                     cx = x + card_w + gap + colon_w // 2
-                    radius = max(4, colon_w // 5)
-                    pygame.draw.circle(
-                        screen, FG, (cx, digit_y + int(digit_h * 0.36)), radius
+                    # Square dots suit the seven-segment look better than circles.
+                    dot = max(6, colon_w // 3)
+                    colon_color = FG if blink_on else BG
+                    pygame.draw.rect(
+                        screen, colon_color,
+                        pygame.Rect(
+                            cx - dot // 2,
+                            digit_y + int(digit_h * 0.36) - dot // 2,
+                            dot, dot,
+                        ),
                     )
-                    pygame.draw.circle(
-                        screen, FG, (cx, digit_y + int(digit_h * 0.74)), radius
+                    pygame.draw.rect(
+                        screen, colon_color,
+                        pygame.Rect(
+                            cx - dot // 2,
+                            digit_y + int(digit_h * 0.74) - dot // 2,
+                            dot, dot,
+                        ),
                     )
                     x += card_w + gap + colon_w
                 else:
