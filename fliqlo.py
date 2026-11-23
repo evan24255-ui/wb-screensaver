@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Fliqlo-style flip clock screensaver for the Raspberry Pi 3.5" 480x320 LCD.
 
-Black background, thin white split-flap digits, smooth flip animation.
-Click / touch / Esc exits.  Designed to be launched by idle_watch.sh.
+Retro seven-segment look: configurable colour, dim ghost segments, brightness
+and optional CRT-style afterglow. Click / touch / Esc exits.
+Designed to be launched by idle_watch.sh.
 """
 import datetime
 import os
-import sys
 import time
 
 import pygame
@@ -19,7 +19,6 @@ FONT_CANDIDATES = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
 ]
 
-FG = (232, 232, 232)
 CARD_BG = (10, 10, 10)
 CARD_EDGE = (42, 42, 42)
 SEAM = (0, 0, 0)
@@ -27,8 +26,41 @@ BG = (0, 0, 0)
 
 FLIP_SECONDS = 0.38
 # The touchscreen can deliver a stale press when the fullscreen window is mapped.
-# Ignore input for the first two seconds so the saver does not exit instantly.
 GRACE_SECONDS = 2.0
+
+
+def parse_color(value, default):
+    """Parse #RRGGBB or #RGB into (r, g, b); return default on bad input."""
+    if not value:
+        return default
+    s = value.lstrip("#")
+    try:
+        if len(s) == 3:
+            s = "".join(c * 2 for c in s)
+        if len(s) != 6:
+            return default
+        return tuple(int(s[i:i + 2], 16) for i in (0, 2, 4))
+    except ValueError:
+        return default
+
+
+def apply_brightness(rgb, percent):
+    """Scale an RGB tuple by a brightness percentage (0-100)."""
+    factor = max(0, min(100, percent)) / 100.0
+    return tuple(int(c * factor + 0.5) for c in rgb)
+
+
+def env_int(name, default, minimum=None):
+    try:
+        value = int(os.environ.get(name, str(default)))
+    except ValueError:
+        value = default
+    return max(minimum, value) if minimum is not None else value
+
+
+# Configured in main() before any glyph surfaces are rendered.
+FG = (255, 164, 43)
+GHOST = (42, 20, 0)
 
 
 def log(message):
@@ -47,8 +79,8 @@ def load_font(size):
     return pygame.freetype.SysFont("sans-serif", size)
 
 
-def render_digit(font, char):
-    surface, _ = font.render(char, FG)
+def render_digit(font, char, color=None):
+    surface, _ = font.render(char, FG if color is None else color)
     return surface
 
 
@@ -60,52 +92,12 @@ def split_halves(surface):
     return top, bottom
 
 
-class FlapDigit:
-    def __init__(self, char, font):
-        self.char = char
-        self.surface = render_digit(font, char)
-        self.top, self.bottom = split_halves(self.surface)
-        self.previous = char
-        self.flip_start = 0.0
-
-    def set(self, char, now):
-        if char == self.char:
-            return
-        self.previous = self.char
-        self.char = char
-        self.flip_start = now
-
-    def draw(self, surface, x, y, now):
-        new_top, new_bottom = render_digit_cache(self.char, font_store)
-        old_top, old_bottom = render_digit_cache(self.previous, font_store)
-        width, half = new_top.get_size()
-        elapsed = now - self.flip_start
-
-        if elapsed >= FLIP_SECONDS:
-            surface.blit(new_top, (x, y))
-            surface.blit(new_bottom, (x, y + half))
-            return
-
-        progress = elapsed / FLIP_SECONDS
-        if progress < 0.5:
-            # First half: new top is revealed while the old top folds down.
-            surface.blit(new_top, (x, y))
-            surface.blit(new_bottom, (x, y + half))
-            shrink = max(1, int(half * (1.0 - progress * 2.0)))
-            flap = pygame.transform.smoothscale(old_top, (width, shrink))
-            surface.blit(flap, (x, y + half - shrink))
-        else:
-            # Second half: the flap swings down and becomes the new bottom.
-            surface.blit(new_top, (x, y))
-            surface.blit(old_bottom, (x, y + half))
-            grow = max(1, int(half * (progress - 0.5) * 2.0))
-            flap = pygame.transform.smoothscale(new_bottom, (width, grow))
-            surface.blit(flap, (x, y + half))
-
-
-# Small cache shared by all digits; populated in main().
+# Small caches shared by all digits; populated in main().
 digit_cache = {}
+ghost_cache = {}
 font_store = None
+afterglow_on = False
+afterglow_ms = 700
 
 
 def render_digit_cache(char, font):
@@ -114,8 +106,94 @@ def render_digit_cache(char, font):
     return digit_cache[char]
 
 
+def render_ghost_cache(font):
+    """A dim '8' lights every segment, so it shows through unlit strokes."""
+    if GHOST is None:
+        return None
+    if "8" not in ghost_cache:
+        ghost_cache["8"] = split_halves(render_digit(font, "8", GHOST))
+    return ghost_cache["8"]
+
+
+class FlapDigit:
+    def __init__(self, char):
+        self.char = char
+        self.previous = char
+        self.flip_start = 0.0
+        self.glow_char = None
+        self.glow_start = 0.0
+
+    def set(self, char, now):
+        if char == self.char:
+            return
+        self.previous = self.char
+        self.char = char
+        self.flip_start = now
+        if afterglow_on:
+            self.glow_char = self.previous
+            self.glow_start = now
+
+    def draw(self, surface, x, y, now):
+        new_top, new_bottom = render_digit_cache(self.char, font_store)
+        width, half = new_top.get_size()
+        elapsed = now - self.flip_start
+
+        # Dim "8" beneath the digit: the unlit segments of a real LED display.
+        ghost = render_ghost_cache(font_store)
+        if ghost is not None:
+            surface.blit(ghost[0], (x, y))
+            surface.blit(ghost[1], (x, y + half))
+
+        # Afterglow: the old glyph fades under the new one, so it is only
+        # visible where the new digit has no lit segment.
+        if self.glow_char is not None:
+            age_ms = (now - self.glow_start) * 1000.0
+            if 0 <= age_ms < afterglow_ms:
+                alpha = int(255 * (1.0 - age_ms / afterglow_ms) ** 2)
+                old_top, old_bottom = render_digit_cache(self.glow_char, font_store)
+                faded_top = old_top.copy()
+                faded_top.set_alpha(alpha)
+                faded_bottom = old_bottom.copy()
+                faded_bottom.set_alpha(alpha)
+                surface.blit(faded_top, (x, y))
+                surface.blit(faded_bottom, (x, y + half))
+            else:
+                self.glow_char = None
+
+        if elapsed >= FLIP_SECONDS:
+            surface.blit(new_top, (x, y))
+            surface.blit(new_bottom, (x, y + half))
+            return
+
+        old_top, old_bottom = render_digit_cache(self.previous, font_store)
+        progress = elapsed / FLIP_SECONDS
+        if progress < 0.5:
+            surface.blit(new_top, (x, y))
+            surface.blit(new_bottom, (x, y + half))
+            shrink = max(1, int(half * (1.0 - progress * 2.0)))
+            flap = pygame.transform.smoothscale(old_top, (width, shrink))
+            surface.blit(flap, (x, y + half - shrink))
+        else:
+            surface.blit(new_top, (x, y))
+            surface.blit(old_bottom, (x, y + half))
+            grow = max(1, int(half * (progress - 0.5) * 2.0))
+            flap = pygame.transform.smoothscale(new_bottom, (width, grow))
+            surface.blit(flap, (x, y + half))
+
+
 def main():
-    global font_store
+    global FG, GHOST, font_store, afterglow_on, afterglow_ms
+
+    # Colour configuration. Defaults give a soft amber vintage LED look.
+    base = parse_color(os.environ.get("WB_COLOR", "#FFA42B"), (255, 164, 43))
+    brightness = env_int("WB_BRIGHTNESS", 85)
+    FG = apply_brightness(base, brightness)
+    ghost_value = os.environ.get("WB_GHOST_COLOR", "#2A1400")
+    GHOST = None if ghost_value.lower() in ("off", "0", "none") else parse_color(
+        ghost_value, (42, 20, 0)
+    )
+    afterglow_on = os.environ.get("WB_AFTERGLOW", "0") != "0"
+    afterglow_ms = max(100, env_int("WB_AFTERGLOW_MS", 700))
 
     os.environ.setdefault("SDL_VIDEODRIVER", "x11")
     pygame.init()
@@ -130,9 +208,10 @@ def main():
 
     width, height = screen.get_size()
     pygame.mouse.set_visible(False)
-    log("started %dx%d" % (width, height))
+    log("started %dx%d fg=%s ghost=%s brightness=%d afterglow=%s" % (
+        width, height, FG, GHOST, brightness, afterglow_on
+    ))
 
-    # Scale the font until the four cards plus colon fit the panel.
     font_size = int(height * 0.48)
     while True:
         font_store = load_font(font_size)
@@ -153,9 +232,9 @@ def main():
 
     for ch in "0123456789":
         render_digit_cache(ch, font_store)
+    render_ghost_cache(font_store)
 
-    clock = ["0", "0", "0", "0"]
-    digits = [FlapDigit(ch, font_store) for ch in clock]
+    digits = [FlapDigit(ch) for ch in "0000"]
 
     running = True
     last_time = None
@@ -165,20 +244,14 @@ def main():
     was_animating = False
     clock_tick = pygame.time.Clock()
 
-    # Colon blink: honour WB_BLINK=0 to disable, WB_BLINK_MS for the half-period.
+    # Colon blink: WB_BLINK=0 disables it, WB_BLINK_MS sets the half-period.
     blink_enabled = os.environ.get("WB_BLINK", "1") != "0"
-    try:
-        blink_ms = int(os.environ.get("WB_BLINK_MS", "1000"))
-    except ValueError:
-        blink_ms = 1000
-    blink_ms = max(100, blink_ms)
+    blink_ms = max(100, env_int("WB_BLINK_MS", 1000))
     was_blink_on = True
 
     while running:
         now = time.monotonic()
 
-        # Square colon dots blink by toggling between the foreground and
-        # background colour; force one redraw on each state change only.
         blink_on = (not blink_enabled) or (int(now * 1000) // blink_ms) % 2 == 0
         if blink_on != was_blink_on:
             redraw = True
@@ -207,12 +280,13 @@ def main():
         animating = any(
             0 <= now - d.flip_start < FLIP_SECONDS for d in digits
         )
+        # Afterglow keeps changing after the flap settles; keep redrawing.
+        glowing = afterglow_on and any(d.glow_char is not None for d in digits)
         if was_animating and not animating:
             redraw = True
         was_animating = animating
 
-        # Redraw only on a change or while a flap is moving: keeps CPU low on a Pi 3B.
-        if redraw or animating:
+        if redraw or animating or glowing:
             screen.fill(BG)
 
             x = start_x
@@ -232,7 +306,6 @@ def main():
 
                 if index == 1:
                     cx = x + card_w + gap + colon_w // 2
-                    # Square dots suit the seven-segment look better than circles.
                     dot = max(6, colon_w // 3)
                     colon_color = FG if blink_on else BG
                     pygame.draw.rect(
@@ -275,6 +348,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception as exc:  # keep a traceback in the log for debugging
+    except Exception as exc:
         log("ERROR: %r" % exc)
         raise

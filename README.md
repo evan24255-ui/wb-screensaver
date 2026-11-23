@@ -11,7 +11,7 @@
 
 | 屏保 | 说明 |
 |---|---|
-| 翻页时钟（Fliqlo 风格） | 黑底数码管字、翻页动画、中央分割线与闪烁方形冒号，数字自动走时（默认 DSEG7 七段字体） |
+| 翻页时钟（Fliqlo 风格） | 复古琥珀色七段数码管、幽灵笔画、翻页动画、闪烁方形冒号，数字自动走时 |
 | 数字雨（Matrix） | 绿色字符流下落 |
 | 星空（Stars） | 缓慢漂移的星点 |
 
@@ -74,6 +74,11 @@ nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 | `WB_IDLE_MS` | `60000` | 空闲触发阈值（毫秒） |
 | `WB_IDLE_SAVER` | `flip` | 自动触发时使用哪个屏保：`flip` / `matrix` / `stars` |
 | `WB_FONT` | DSEG7 Classic Bold | 时钟字体文件路径。默认 `/usr/share/fonts/truetype/dseg7-classic/dseg7-classic-latin-700-normal.ttf`（七段数码管）；原 Quicksand 字体仍作为回退 |
+| `WB_COLOR` | `#FFA42B` | 数字颜色（琥珀色）。接受 `#RRGGBB` 或 `#RGB`，如 `#4AF626` 磷光绿、`#E8E8E8` 冷白 |
+| `WB_BRIGHTNESS` | `85` | 亮度百分比 0-100，按比例缩放颜色，默认 85% 柔和不刺眼 |
+| `WB_GHOST_COLOR` | `#2A1400` | 未点亮笔画的暗底色（幽灵笔画）。设 `off` / `0` 关闭 |
+| `WB_AFTERGLOW` | `0` | 设 `1` 开启 CRT 余辉：熄灭的笔画渐隐而非瞬间消失 |
+| `WB_AFTERGLOW_MS` | `700` | 余辉持续时间（毫秒），仅当 `WB_AFTERGLOW=1` 时有效 |
 | `WB_DEBUG` | 空 | 设任意值开启时钟调试日志 |
 | `WB_SNAP` | 空 | 设任意值时启动 3 秒后保存渲染快照到 `/tmp/wb_snap.png` |
 | `WB_BLINK` | `1` | 设 `0` 关闭时钟冒号闪烁（常亮） |
