@@ -25,9 +25,10 @@
 | ![夜间模式](img/05-night-mode.png) | 22:00–07:00 自动降低亮度至 50% | 2026-11-23 |
 | ![数字对齐](img/06-digit-alignment.png) | 「1」对齐到右侧段；字形按墨迹中心校正，中缝线与中间横段对齐 | 2026-11-23 |
 | ![对齐细节](img/06-digit-alignment-detail.png) | 数字对齐细节对照（含幽灵笔画与中缝） | 2026-11-23 |
-| ![RetroArch 菜单](img/07-retroarch-menu.png) | 新增 RetroArch 复古游戏模拟器（装在 `~/work`，USB 手柄操控，480×320 全屏菜单） | 2026-11-23 |
+| ![RetroArch 菜单](img/07-retroarch-menu.png) | 新增 RetroArch 复古游戏模拟器（USB 手柄操控，480×320 全屏菜单） | 2026-11-23 |
+| ![全屏启动](img/08-retroarch-fullscreen.png) | 修复菜单启动非全屏；游戏文件收拢到 `~/work/retroarch/` 子目录，菜单启动直接全屏 | 2026-11-23 |
 
-> **关于游戏模拟器**：RetroArch 及 ROM 目录都放在 `~/work/`，与本项目分开。启动方式见 [~/work/README.md](../../work/README.md)（若不存在则用 `~/work/start-retroarch.sh`）。
+> **关于游戏模拟器**：RetroArch 及所有相关文件都放在 `~/work/retroarch/` 子目录（不污染 `~/work` 根目录），与本项目分开。从 LXDE 应用程序菜单的「RetroArch (SPI 480x320)」启动即全屏；命令行方式见 [~/work/retroarch/README.md](../../work/retroarch/README.md)。
 
 > **维护约定**：新增或修改 UI 时，先在 Pi 上用 `WB_SNAP=1`（时钟）或截图工具保存新图，按 `img/序号-简述.png` 命名，再在上表追加一行。详见下方「截图归档」一节。
 
