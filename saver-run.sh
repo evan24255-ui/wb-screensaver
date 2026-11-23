@@ -10,6 +10,9 @@ name="${1:-flip}"
 export DISPLAY="${DISPLAY:-:0}"
 export XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"
 export SDL_VIDEODRIVER=x11
+# The LXDE autostart chain does not read ~/.bashrc, so set the flip-clock
+# font here. Override by exporting WB_FONT before launching.
+export WB_FONT="${WB_FONT:-/usr/share/fonts/truetype/dseg7-classic/dseg7-classic-latin-700-normal.ttf}"
 xset s off >/dev/null 2>&1
 xset -dpms >/dev/null 2>&1
 

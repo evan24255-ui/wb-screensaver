@@ -11,7 +11,7 @@
 
 | 屏保 | 说明 |
 |---|---|
-| 翻页时钟（Fliqlo 风格） | 黑底细白字、翻页动画、中央分割线与冒号，数字自动走时 |
+| 翻页时钟（Fliqlo 风格） | 黑底数码管字、翻页动画、中央分割线与冒号，数字自动走时（默认 DSEG7 七段字体） |
 | 数字雨（Matrix） | 绿色字符流下落 |
 | 星空（Stars） | 缓慢漂移的星点 |
 
@@ -65,13 +65,15 @@ nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 
 ## 配置
 
+通过环境变量调整。注意：屏保由 LXDE autostart 启动，**不会读取 `~/.bashrc`**，因此写在该文件里的 `export` 不生效。请把变量写进 `saver-run.sh` 顶部，或在 `.desktop` 的 `Exec` 前加 `env 变量=值`：
+
 通过环境变量调整（在 `start.sh` 或 autostart 的 `.desktop` 里设置）：
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `WB_IDLE_MS` | `60000` | 空闲触发阈值（毫秒） |
 | `WB_IDLE_SAVER` | `flip` | 自动触发时使用哪个屏保：`flip` / `matrix` / `stars` |
-| `WB_FONT` | Quicksand Medium | 时钟字体文件路径（如 `/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf`） |
+| `WB_FONT` | DSEG7 Classic Bold | 时钟字体文件路径。默认 `/usr/share/fonts/truetype/dseg7-classic/dseg7-classic-latin-700-normal.ttf`（七段数码管）；原 Quicksand 字体仍作为回退 |
 | `WB_DEBUG` | 空 | 设任意值开启时钟调试日志 |
 | `WB_SNAP` | 空 | 设任意值时启动 3 秒后保存渲染快照到 `/tmp/wb_snap.png` |
 
