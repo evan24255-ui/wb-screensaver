@@ -30,6 +30,14 @@ saver_running() {
     return 1
 }
 
+# Do not pop the screensaver over another fullscreen app (e.g. RetroArch).
+# Gamepad input does not reset X's idle timer, so 60 s of gamepad-only play
+# would otherwise trigger the saver and cover the game window.
+fullscreen_app_running() {
+    pgrep -x retroarch >/dev/null 2>&1 && return 0
+    return 1
+}
+
 # X's own blanking/DPMS would turn the panel off; let our saver own the screen.
 xset s off >/dev/null 2>&1
 xset s noblank >/dev/null 2>&1
@@ -38,7 +46,7 @@ xset -dpms >/dev/null 2>&1
 log "watcher started: display=$DISPLAY threshold=${IDLE_MS}ms"
 
 while true; do
-    if saver_running; then
+    if saver_running || fullscreen_app_running; then
         sleep 2
         continue
     fi
