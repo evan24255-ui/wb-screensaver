@@ -107,21 +107,29 @@ def load_font(size):
 
 
 def build_glyph_layout(font):
-    """Derive one common cell from every digit's freetype glyph rect.
+    """Build one shared cell anchored on the full-height '8' glyph.
 
-    font.render() returns a tightly cropped surface plus a rect describing
-    where the ink sits relative to the glyph origin. Dropping that rect makes
-    DSEG7's "1" (origin x=88, width 20) hug the left edge instead of occupying
-    the right-hand segments as a real seven-segment display does.
+    font.render() returns a tightly cropped surface plus the glyph origin.
+    Horizontal offsets come from that origin, so DSEG7's narrow "1" lands on
+    the right-hand segments like a real LED. Vertically we centre each glyph's
+    ink in the cell instead of using its origin: DSEG7 draws "1"/"4" 12px
+    shorter and shifted up, which otherwise leaves them misaligned with the
+    ghost "8" and with the flip seam.
     """
     global glyph_cell, glyph_offsets
-    rects = {ch: font.render(ch, FG)[1] for ch in "0123456789"}
-    x0 = min(r[0] for r in rects.values())
-    y0 = min(r[1] for r in rects.values())
-    width = max(r[0] + r[2] for r in rects.values()) - x0
-    height = max(r[1] + r[3] for r in rects.values()) - y0
-    glyph_cell = (width, height)
-    glyph_offsets = {ch: (r[0] - x0, r[1] - y0) for ch, r in rects.items()}
+    rendered = {ch: font.render(ch, FG) for ch in "0123456789"}
+    ref_surface, ref_rect = rendered["8"]
+    ref_w, ref_h = ref_surface.get_size()
+    left = min(rect[0] for _, rect in rendered.values())
+    width = max(rect[0] + surface.get_width() for surface, rect in rendered.values()) - left
+    glyph_cell = (width, ref_h)
+    glyph_offsets = {
+        ch: (
+            rect[0] - left,
+            (ref_h - surface.get_height()) // 2,
+        )
+        for ch, (surface, rect) in rendered.items()
+    }
 
 
 def render_digit(font, char, color=None):
