@@ -30,6 +30,7 @@
 | ![游戏桌面图标](img/09-game-desktop-icon.png) | 新增「游戏模拟器」桌面图标，双击即全屏启动（含手柄图标） | 2026-11-24 |
 | ![手柄映射](img/10-gamepad-mapping.png) | 修复手柄方向键：D-pad 是轴（`ABS=3`）非 hat，改用 axis 映射；附按键测试器 | 2026-11-24 |
 | ![游戏运行](img/11-action53-running.png) | 装入 Action53 54 合 1 合集 + 开源 homebrew，装 mesen 核心支持 mapper 218；修复游戏中途弹屏保的 bug | 2026-11-24 |
+| ![100合1图标](img/12-100in1-icon.png) | 新增「100合1」桌面图标；Nestopia 启动、手柄显式映射、关闭 vsync；rom-500 按平台分类到 `roms/nes`、`roms/snes`、`roms/md` | 2026-11-24 |
 
 > **关于游戏模拟器**：RetroArch 及所有相关文件都放在 `~/work/retroarch/` 子目录（不污染 `~/work` 根目录），与本项目分开。桌面双击「游戏模拟器」图标即可全屏启动（推荐）；也可用 LXDE 应用程序菜单的「RetroArch (SPI 480x320)」或直接敲 `retroarch`。命令行方式见 [~/work/retroarch/README.md](../../work/retroarch/README.md)。
 
