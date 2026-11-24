@@ -9,7 +9,7 @@
 | 屏保 | 说明 |
 |---|---|
 | 翻页时钟（Fliqlo 风格） | 复古琥珀色七段数码管、幽灵笔画、翻页动画、闪烁方形冒号，数字自动走时 |
-| 天气面板（屏保模式） | 与时钟在同一屏保内轮播：日期时间 + 天气图标 + 温度 / 湿度 / 体感 / 今日高低温 / 风；三套配色：黑底琥珀 / 牛皮纸 / 米色纸 |
+| 天气面板（屏保模式） | 与时钟在同一屏保内轮播：日期时间 + 天气图标 + 温度 / 湿度 / 体感 / 今日高低温 / 风；白天牛皮纸、夜间黑底琥珀，可配米色纸 |
 | 数字雨（Matrix） | 绿色字符流下落 |
 | 星空（Stars） | 缓慢漂移的星点 |
 
@@ -39,6 +39,7 @@
 | ![牛皮纸主题](img/17-weather-paper-kraft.png) | `paper` 主题改为与设计稿一致的牛皮纸橙底 + 墨黑字；新增 `paper-light` 米色纸主题 | 2026-11-24 |
 | ![米色纸主题](img/18-weather-paper-light.png) | `paper-light` 米色纸主题（浅暖底深褐字，适合白天常亮） | 2026-11-24 |
 | ![纸质天气图标](img/19-weather-paper-icon.png) | 桌面新增「纸质天气面板屏保」图标（牛皮纸配色，一键体验 paper 主题）；`quick_exec=1` 免去执行确认弹窗 | 2026-11-24 |
+| ![昼夜切换](img/20-weather-daynight-switch.png) | 天气面板配色按昼夜自动切换：白天 `paper` 牛皮纸、22:00–07:00 切 `dark` 黑底琥珀并降亮，时间窗沿用夜间模式 | 2026-11-24 |
 
 > **关于游戏模拟器**：RetroArch 是独立项目，所有文件、ROM、核心、脚本、文档都在 `~/work/retroarch/`，本仓库只保留桌面图标与启动器的截图记录。游戏怎么装、怎么按键、怎么退出、怎么排错，一律看 [~/work/retroarch/README.md](../../work/retroarch/README.md)，不要在本 README 里重复。
 
@@ -121,7 +122,8 @@ nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 | `WB_WEATHER_ONLY` | `0` | 设 `1` 只显示天气面板（`saver-run.sh weather` 已自动设置） |
 | `WB_CLOCK_SECONDS` | `20` | 轮播中时钟画面时长（秒） |
 | `WB_WEATHER_SECONDS` | `12` | 轮播中天气面板时长（秒） |
-| `WB_WEATHER_THEME` | `weather.conf` 的 `THEME` | 天气面板配色：`dark` 黑底琥珀（与时钟统一）、`paper` 牛皮纸、`paper-light` 米色纸。环境变量优先于配置文件 |
+| `WB_WEATHER_THEME` | 空（跟 `weather.conf`） | 钉死一套天气配色，忽略昼夜切换：`dark` / `paper` / `paper-light` |
+| `THEME_DAY` / `THEME_NIGHT` | `paper` / `dark` | `weather.conf` 里的白天 / 夜间配色，时间窗沿用 `WB_NIGHT_START`–`WB_NIGHT_END` |
 | `WB_WEATHER_PROXY` | 空 | 取 Open-Meteo 时用的 HTTP 代理（如 `http://192.168.5.200:7897`）；wttr.in 通常直连可用 |
 | `WB_SNAP_WEATHER` | 空 | 设任意值时把天气面板存成 `/tmp/wb_snap_weather.png` |
 
@@ -149,21 +151,23 @@ WB_NIGHT_START=23:30 WB_NIGHT_END=06:15 WB_NIGHT_BRIGHTNESS=35 \
 
 ```ini
 # CITY 仅用于屏幕显示；取数用 LAT/LON
-# THEME 面板配色：dark / paper / paper-light
+# 主题：白天 THEME_DAY / 夜间 THEME_NIGHT
 CITY=唐山
 LAT=39.63
 LON=118.18
-THEME=dark
+THEME_DAY=paper
+THEME_NIGHT=dark
 ```
 
   删掉该文件或留空时，会用 IP 定位自动补全一次并记入日志。改城市时 `CITY` 与 `LAT`/`LON` 一起改；缓存里若还是旧城市的数据会被忽略并重新取数，不会出现「城市名换了、温度还是别处」的情况。
 - **图标**：**Weather Icons**（erikflowers/weather-icons，字体 SIL OFL 1.1），随仓库附带 `fonts/weathericons-regular-webfont.ttf`，按 Unicode 码位渲染，不依赖网络、不需要额外图标文件。
-- **主题**：三套配色，改 `weather.conf` 的 `THEME` 即换默认值（环境变量 `WB_WEATHER_THEME` 优先）：
-  - `dark`（默认）黑底 `#0A0704` + 满饱和琥珀 `#FFA42B`，与时钟同一套颜色语言；
-  - `paper` 牛皮纸橙底 `#C96A1E` + 墨黑字，还原设计稿的纸感卡片，适合当常亮天气牌；
-  - `paper-light` 米色纸 `#EEDEC6` + 深褐字，白天看最柔和。
+- **主题**：白天一套、夜间一套，默认 `THEME_DAY=paper`、`THEME_NIGHT=dark`，到点自动换，不用重启。时间窗直接沿用夜间模式（`WB_NIGHT_START` / `WB_NIGHT_END`，默认 22:00–07:00），屏保跨过 22:00 或 07:00 时会连同配色一起切，日志里有 `weather theme -> dark|paper` 记录。三套可选配色：
+  - `paper` 牛皮纸橙底 `#C96A1E` + 墨黑字，还原设计稿的纸感卡片，白天常亮看最舒服（当前白天默认）；
+  - `dark` 黑底 `#0A0704` + 满饱和琥珀 `#FFA42B`，与时钟同一套颜色语言，夜里不刺眼（当前夜间默认）；
+  - `paper-light` 米色纸 `#EEDEC6` + 深褐字，介于两者之间，白天也能用。
+  - 只想要一套配色时把两行写成一样，或直接用 `THEME=paper`（旧的单值写法仍然有效）；`WB_WEATHER_THEME` 环境变量可以钉死一套、忽略时间切换。关掉夜间模式（`WB_NIGHT_MODE=0`）就不会切换，始终用 `THEME_DAY`。
 - **亮度**：深色主题在白天按 100% 出图（不再套用时钟的 85% 柔和亮度，避免琥珀色发暗发土），夜间 22:00–07:00 才随 `WB_NIGHT_BRIGHTNESS` 降亮；两种纸主题是浅底配色，不参与夜间降亮。
-- **只看天气**：双击桌面「天气面板屏保」（跟 `THEME`）或「纸质天气面板屏保」（固定 `paper`），也可执行 `./saver-run.sh weather` / `./saver-run.sh weather-paper`。
+- **只看天气**：双击桌面「天气面板屏保」（跟配置、会昼夜切换）或「纸质天气面板屏保」（固定 `paper`，用于白天试色），也可执行 `./saver-run.sh weather` / `./saver-run.sh weather-paper`。
 
 ## 文件结构
 
@@ -171,7 +175,7 @@ THEME=dark
 wb-screensaver/
 ├── fliqlo.py        # 翻页时钟（Fliqlo 风格）+ 天气场景轮播
 ├── weather.py       # 天气面板：取数、渲染、缓存
-├── weather.conf     # 天气位置与主题配置（CITY / LAT / LON / THEME）
+├── weather.conf     # 天气位置与昼夜配色（CITY / LAT / LON / THEME_DAY / THEME_NIGHT）
 ├── fonts/           # Weather Icons 图标字体（SIL OFL 1.1）
 ├── matrix.py        # 数字雨
 ├── stars.py         # 星空

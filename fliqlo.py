@@ -290,25 +290,31 @@ def main():
         weather_only or os.environ.get("WB_WEATHER", "1") != "0"
     )
     board = None
+    theme_day = theme_night = "dark"
     if weather_enabled:
         try:
             weather_service = weather_mod.WeatherService()
             weather_service.start()
-            # Theme precedence: environment, then weather.conf, then dark.
-            theme = (os.environ.get("WB_WEATHER_THEME", "") or "").strip().lower()
-            if not theme:
-                theme = (weather_mod.load_conf().get("THEME", "") or "dark").strip().lower()
+            # Theme precedence: WB_WEATHER_THEME pins one palette for both
+            # periods; otherwise THEME_DAY / THEME_NIGHT switch with the same
+            # 22:00-07:00 window the clock uses. THEME is the legacy single key.
+            conf = weather_mod.load_conf()
+            pinned = (os.environ.get("WB_WEATHER_THEME", "") or "").strip().lower()
+            default = (conf.get("THEME_DAY") or conf.get("THEME") or "dark").strip().lower()
+            theme_day = pinned or default
+            theme_night = pinned or (conf.get("THEME_NIGHT") or theme_day).strip().lower()
             # The board renders at full colour in daylight, exactly like the
             # reference mock; only night mode scales it down.
             board = weather_mod.WeatherBoard(
                 (width, height),
                 base,
                 GHOST,
-                theme=theme,
+                theme=theme_night if period == "night" else theme_day,
                 service=weather_service,
                 brightness=100 if period == "day" else night_brightness,
             )
-            log("weather scene enabled (only=%s theme=%s)" % (weather_only, board.theme))
+            log("weather scene enabled (only=%s theme=%s day=%s night=%s)" % (
+                weather_only, board.theme, theme_day, theme_night))
         except Exception as exc:
             log("weather scene disabled: %r" % exc)
             board = None
@@ -382,6 +388,8 @@ def main():
             if board is not None:
                 board.set_colors(base, GHOST)
                 board.set_brightness(100 if period == "day" else night_brightness)
+                board.set_theme(theme_night if period == "night" else theme_day)
+                log("weather theme -> %s" % board.theme)
             log("period -> %s fg=%s brightness=%d" % (period, FG, active_brightness))
 
         blink_on = (not blink_enabled) or (int(now * 1000) // blink_ms) % 2 == 0
