@@ -40,6 +40,7 @@
 | ![米色纸主题](img/18-weather-paper-light.png) | `paper-light` 米色纸主题（浅暖底深褐字，适合白天常亮） | 2026-11-24 |
 | ![纸质天气图标](img/19-weather-paper-icon.png) | 桌面新增「纸质天气面板屏保」图标（牛皮纸配色，一键体验 paper 主题）；`quick_exec=1` 免去执行确认弹窗 | 2026-11-24 |
 | ![昼夜切换](img/20-weather-daynight-switch.png) | 天气面板配色按昼夜自动切换：白天 `paper` 牛皮纸、22:00–07:00 切 `dark` 黑底琥珀并降亮，时间窗沿用夜间模式 | 2026-11-24 |
+| ![布局修正](img/21-weather-layout-fix.png) | 左侧信息块重排：图标 106→88px 并右移，最大的「多云」图标不再压左侧虚线；文字块右移 36px，图文间隔 8→16px 以上，三行明细行距 26→28px | 2026-11-24 |
 
 > **关于游戏模拟器**：RetroArch 是独立项目，所有文件、ROM、核心、脚本、文档都在 `~/work/retroarch/`，本仓库只保留桌面图标与启动器的截图记录。游戏怎么装、怎么按键、怎么退出、怎么排错，一律看 [~/work/retroarch/README.md](../../work/retroarch/README.md)，不要在本 README 里重复。
 

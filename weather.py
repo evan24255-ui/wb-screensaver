@@ -658,15 +658,18 @@ class WeatherBoard:
 
         cond_key = (data or {}).get("cond", "cloud")
         label, icon_key = CONDITIONS.get(cond_key, ("--", cond_key))
-        draw_icon(surface, icon_key, (76, 170), 106, ink)
+        # Centre the glyph further inside the dashed box: the widest icon
+        # (partly = sun + cloud, 1.4x a square glyph) used to reach the left
+        # border, and 96 px keeps even that one clear of the dashes.
+        draw_icon(surface, icon_key, (94, 168), 88, ink)
 
-        draw_text(surface, CJK_FONT, 30, label, (136, 108), ink)
+        draw_text(surface, CJK_FONT, 30, label, (172, 104), ink)
 
         if data:
-            draw_mixed(surface, "体感 %d°" % data["feels"], (136, 154), 14, dim)
+            draw_mixed(surface, "体感 %d°" % data["feels"], (172, 158), 14, dim)
             draw_mixed(surface, "今日 %d° ~ %d°" % (data["tmin"], data["tmax"]),
-                       (136, 180), 14, dim)
-            draw_mixed(surface, "风 %d km/h" % data.get("wind", 0), (136, 206), 14, dim)
+                       (172, 186), 14, dim)
+            draw_mixed(surface, "风 %d km/h" % data.get("wind", 0), (172, 214), 14, dim)
 
         # ---- right column
         draw_text(surface, LABEL_FONT, 10, "TEMPERATURE", (right, 84), label_c, align="right")
