@@ -34,6 +34,7 @@
 | ![100合1图标](img/12-100in1-icon.png) | 桌面新增「100合1」图标（双击用 Nestopia 直接进 100 合 1 合集） | 2026-11-24 |
 | ![天气面板](img/13-weather-board.png) | 新增天气面板：屏保内「时钟 20 秒 ↔ 天气 12 秒」轮播，DSEG7 数字 + Weather Icons 图标 | 2026-11-24 |
 | ![天气桌面图标](img/14-weather-desktop-icon.png) | 桌面新增「天气面板屏保」图标（单独只看天气，不轮播时钟） | 2026-11-24 |
+| ![纸感主题](img/15-weather-paper.png) | 天气面板 `WB_WEATHER_THEME=paper` 暖纸底深字主题（还原设计稿质感） | 2026-11-24 |
 
 > **关于游戏模拟器**：RetroArch 是独立项目，所有文件、ROM、核心、脚本、文档都在 `~/work/retroarch/`，本仓库只保留桌面图标与启动器的截图记录。游戏怎么装、怎么按键、怎么退出、怎么排错，一律看 [~/work/retroarch/README.md](../../work/retroarch/README.md)，不要在本 README 里重复。
 
