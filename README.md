@@ -34,6 +34,10 @@
 
 > **关于游戏模拟器**：RetroArch 及所有相关文件都放在 `~/work/retroarch/` 子目录（不污染 `~/work` 根目录），与本项目分开。桌面双击「游戏模拟器」图标即可全屏启动（推荐）；也可用 LXDE 应用程序菜单的「RetroArch (SPI 480x320)」或直接敲 `retroarch`。命令行方式见 [~/work/retroarch/README.md](../../work/retroarch/README.md)。
 
+> **手柄热键（没有键盘也能操作）**：`Select`（按键 8）是修饰键，需与另一个键同时按。
+> `Select+Start` 打开/关闭 Quick Menu；`Select+L` 连按两次退出 RetroArch 回桌面；`Select+R` 即时存档；`Select+Y` 读档；`Select+X` 软复位；`Select+A` 切换存档位。
+> 完整按键表与排错见 [~/work/retroarch/README.md](../../work/retroarch/README.md)。NES 本体只有 A/B/Select/Start，所以 L/R 在 NES 游戏里本来就没有功能，并非映射缺失。
+
 > **维护约定**：新增或修改 UI 时，先在 Pi 上用 `WB_SNAP=1`（时钟）或截图工具保存新图，按 `img/序号-简述.png` 命名，再在上表追加一行。详见下方「截图归档」一节。
 
 ## 功能特性
