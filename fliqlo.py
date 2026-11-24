@@ -12,6 +12,14 @@ import time
 import pygame
 import pygame.freetype
 
+try:
+    import weather as weather_mod
+except Exception as _weather_exc:  # keep the clock usable without the module
+    weather_mod = None
+    _WEATHER_IMPORT_ERROR = _weather_exc
+else:
+    _WEATHER_IMPORT_ERROR = None
+
 FONT_CANDIDATES = [
     os.environ.get("WB_FONT", ""),
     "/usr/share/fonts/truetype/quicksand/Quicksand-Medium.ttf",
@@ -276,6 +284,35 @@ def main():
         width, height, FG, GHOST, period, active_brightness, afterglow_on
     ))
 
+    # ---- weather scene: clock and weather alternate inside one saver process
+    weather_only = os.environ.get("WB_WEATHER_ONLY", "0") != "0"
+    weather_enabled = weather_mod is not None and (
+        weather_only or os.environ.get("WB_WEATHER", "1") != "0"
+    )
+    board = None
+    if weather_enabled:
+        try:
+            weather_service = weather_mod.WeatherService()
+            weather_service.start()
+            board = weather_mod.WeatherBoard(
+                (width, height),
+                FG,
+                GHOST,
+                theme=os.environ.get("WB_WEATHER_THEME", "dark"),
+                service=weather_service,
+            )
+            log("weather scene enabled (only=%s)" % weather_only)
+        except Exception as exc:
+            log("weather scene disabled: %r" % exc)
+            board = None
+    elif weather_mod is None:
+        log("weather module unavailable: %r" % _WEATHER_IMPORT_ERROR)
+
+    clock_seconds = max(5, env_int("WB_CLOCK_SECONDS", 20))
+    weather_seconds = max(5, env_int("WB_WEATHER_SECONDS", 12))
+    scene = "weather" if (weather_only and board is not None) else "clock"
+    scene_start = time.monotonic()
+
     font_size = int(height * 0.48)
     while True:
         font_store = load_font(font_size)
@@ -301,6 +338,8 @@ def main():
     digits = [FlapDigit(ch) for ch in "0000"]
 
     running = True
+    weather_flip = False
+    weather_snap_done = False
     last_time = None
     start_time = time.monotonic()
     snapshot_done = False
@@ -334,6 +373,8 @@ def main():
                 render_digit_cache(ch, font_store)
             render_ghost_cache(font_store)
             redraw = True
+            if board is not None:
+                board.set_colors(FG, GHOST)
             log("period -> %s fg=%s brightness=%d" % (period, FG, active_brightness))
 
         blink_on = (not blink_enabled) or (int(now * 1000) // blink_ms) % 2 == 0
@@ -370,7 +411,26 @@ def main():
             redraw = True
         was_animating = animating
 
-        if redraw or animating or glowing:
+        if board is not None and not weather_only:
+            elapsed = now - scene_start
+            if scene == "clock" and elapsed >= clock_seconds:
+                scene, scene_start, redraw, weather_flip = "weather", now, True, True
+                log("scene -> weather")
+            elif scene == "weather" and elapsed >= weather_seconds:
+                scene, scene_start, redraw = "clock", now, True
+                log("scene -> clock")
+
+        if scene == "weather" and board is not None:
+            if board.draw(screen, now) or weather_flip:
+                pygame.display.flip()
+                weather_flip = False
+            # Force a full repaint when the clock comes back.
+            redraw = True
+            if os.environ.get("WB_SNAP_WEATHER") and not weather_snap_done:
+                pygame.image.save(screen, "/tmp/wb_snap_weather.png")
+                weather_snap_done = True
+                log("weather snapshot saved")
+        elif redraw or animating or glowing:
             screen.fill(BG)
 
             x = start_x

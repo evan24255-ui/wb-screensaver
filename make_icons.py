@@ -5,6 +5,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 OUT = "/home/evan/wb-screensaver/icons"
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+# Weather Icons (SIL OFL 1.1) for the weather launcher.
+WEATHER_FONT = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "fonts", "weathericons-regular-webfont.ttf")
+DSEG_FONT = "/usr/share/fonts/truetype/dseg7-classic/dseg7-classic-latin-700-normal.ttf"
 os.makedirs(OUT, exist_ok=True)
 
 
@@ -37,5 +41,11 @@ for x, y, r in [(14, 16, 2), (32, 12, 1), (48, 22, 2), (20, 38, 1),
                 (42, 44, 2), (30, 50, 1), (53, 52, 1)]:
     d.ellipse((x - r, y - r, x + r, y + r), fill=(230, 240, 255))
 im.save(os.path.join(OUT, "stars.png"))
+
+# Weather: sun behind cloud glyph from Weather Icons, amber on dark.
+im, d = base()
+gf = ImageFont.truetype(WEATHER_FONT, 46)
+d.text((9, 4), "\uf002", font=gf, fill=(255, 164, 43))
+im.save(os.path.join(OUT, "weather.png"))
 
 print("icons written to", OUT)

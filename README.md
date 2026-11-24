@@ -9,6 +9,7 @@
 | 屏保 | 说明 |
 |---|---|
 | 翻页时钟（Fliqlo 风格） | 复古琥珀色七段数码管、幽灵笔画、翻页动画、闪烁方形冒号，数字自动走时 |
+| 天气面板（屏保模式） | 与时钟在同一屏保内轮播：日期时间 + 天气图标 + 温度 / 湿度 / 体感 / 今日高低温 / 风 |
 | 数字雨（Matrix） | 绿色字符流下落 |
 | 星空（Stars） | 缓慢漂移的星点 |
 
@@ -31,6 +32,8 @@
 | ![手柄映射](img/10-gamepad-mapping.png) | 修复手柄方向键：D-pad 是轴（`ABS=3`）非 hat，改用 axis 映射；附按键测试器 | 2026-11-24 |
 | ![游戏运行](img/11-action53-running.png) | 装入 Action53 54 合 1 合集 + 开源 homebrew，装 mesen 核心支持 mapper 218；修复游戏中途弹屏保的 bug | 2026-11-24 |
 | ![100合1图标](img/12-100in1-icon.png) | 桌面新增「100合1」图标（双击用 Nestopia 直接进 100 合 1 合集） | 2026-11-24 |
+| ![天气面板](img/13-weather-board.png) | 新增天气面板：屏保内「时钟 20 秒 ↔ 天气 12 秒」轮播，DSEG7 数字 + Weather Icons 图标 | 2026-11-24 |
+| ![天气桌面图标](img/14-weather-desktop-icon.png) | 桌面新增「天气面板屏保」图标（单独只看天气，不轮播时钟） | 2026-11-24 |
 
 > **关于游戏模拟器**：RetroArch 是独立项目，所有文件、ROM、核心、脚本、文档都在 `~/work/retroarch/`，本仓库只保留桌面图标与启动器的截图记录。游戏怎么装、怎么按键、怎么退出、怎么排错，一律看 [~/work/retroarch/README.md](../../work/retroarch/README.md)，不要在本 README 里重复。
 
@@ -72,7 +75,7 @@ bash install.sh         # 写入 LXDE 自启动项 + 桌面图标
 `install.sh` 会做两件事：
 
 1. 在 `~/.config/autostart/` 写入 `wb-flipclock-screensaver.desktop`，登录后自动启动守护进程；
-2. 在 `~/Desktop/` 创建四个启动图标：翻页时钟、数字雨、星空、随机。
+2. 在 `~/Desktop/` 创建五个启动图标：翻页时钟、天气、数字雨、星空、随机。
 
 立即生效（无需重启）：
 
@@ -82,8 +85,8 @@ nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 
 ## 使用
 
-- **自动**：桌面 1 分钟无操作 → 进入默认屏保（翻页时钟）；点一下屏幕退出。
-- **手动**：双击桌面上的屏保图标直接进入对应效果；点击屏幕或按 Esc 退出。
+- **自动**：桌面 1 分钟无操作 → 进入默认屏保（翻页时钟，其中会轮流显示天气面板）；点一下屏幕退出。
+- **手动**：双击桌面上的屏保图标直接进入对应效果；「天气面板屏保」只显示天气，不轮播时钟；点击屏幕或按 Esc 退出。
 
 ## 配置
 
@@ -109,6 +112,13 @@ nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 | `WB_SNAP` | 空 | 设任意值时启动 3 秒后保存渲染快照到 `/tmp/wb_snap.png` |
 | `WB_BLINK` | `1` | 设 `0` 关闭时钟冒号闪烁（常亮） |
 | `WB_BLINK_MS` | `1000` | 冒号闪烁半周期（毫秒），默认 1 秒亮 / 1 秒灭 |
+| `WB_WEATHER` | `1` | 设 `0` 关闭天气场景，翻页时钟只显示时钟 |
+| `WB_WEATHER_ONLY` | `0` | 设 `1` 只显示天气面板（`saver-run.sh weather` 已自动设置） |
+| `WB_CLOCK_SECONDS` | `20` | 轮播中时钟画面时长（秒） |
+| `WB_WEATHER_SECONDS` | `12` | 轮播中天气面板时长（秒） |
+| `WB_WEATHER_THEME` | `dark` | 天气面板配色：`dark` 黑底琥珀（与时钟统一）、`paper` 暖纸底深字 |
+| `WB_WEATHER_PROXY` | 空 | 取 Open-Meteo 时用的 HTTP 代理（如 `http://192.168.5.200:7897`）；wttr.in 通常直连可用 |
+| `WB_SNAP_WEATHER` | 空 | 设任意值时把天气面板存成 `/tmp/wb_snap_weather.png` |
 
 例：改成 30 秒触发数字雨：
 
@@ -125,14 +135,37 @@ WB_NIGHT_START=23:30 WB_NIGHT_END=06:15 WB_NIGHT_BRIGHTNESS=35 \
 
 夜间模式在运行时持续检查时间，屏保跨过 22:00 / 07:00 边界会自动切换配色，无需重启。切换记录写入 `screensaver.log`。
 
+## 天气面板（屏保模式）
+
+翻页时钟里内置了天气场景：默认 **时钟 20 秒 → 天气 12 秒** 循环，触摸/点击依然是一次退出。画面内容是日期时间 + 当前天气图标 + 温度、湿度、体感、今日高低温、风速。
+
+- **数据**：`wttr.in`（免 key）优先，`Open-Meteo`（免 key）备用；都取不到时回落到 `~/.cache/wb-weather.json` 的上一次结果。后台线程每 10 分钟刷新，取数不阻塞画面，断网也照常显示缓存。
+- **位置**：`weather.conf`（与本文件同目录）：
+
+```ini
+# CITY 仅用于屏幕显示；取数用 LAT/LON
+CITY=石家庄
+LAT=38.04
+LON=114.47
+```
+
+  删掉该文件或留空时，会用 IP 定位自动补全一次并记入日志。
+- **图标**：**Weather Icons**（erikflowers/weather-icons，字体 SIL OFL 1.1），随仓库附带 `fonts/weathericons-regular-webfont.ttf`，按 Unicode 码位渲染，不依赖网络、不需要额外图标文件。
+- **主题**：`WB_WEATHER_THEME=dark` 与时钟完全统一；`paper` 是暖纸底深字，适合单独当天气牌长时间显示。
+- **夜间模式**同步生效：22:00–07:00 天气面板与时钟一起降到 `WB_NIGHT_BRIGHTNESS`。
+- **只看天气**：双击桌面「天气面板屏保」，或执行 `./saver-run.sh weather`。
+
 ## 文件结构
 
 ```
 wb-screensaver/
-├── fliqlo.py        # 翻页时钟（Fliqlo 风格）
+├── fliqlo.py        # 翻页时钟（Fliqlo 风格）+ 天气场景轮播
+├── weather.py       # 天气面板：取数、渲染、缓存
+├── weather.conf     # 天气位置配置（CITY / LAT / LON）
+├── fonts/           # Weather Icons 图标字体（SIL OFL 1.1）
 ├── matrix.py        # 数字雨
 ├── stars.py         # 星空
-├── saver-run.sh     # 统一启动器：flip|matrix|stars|random
+├── saver-run.sh     # 统一启动器：flip|weather|matrix|stars|random
 ├── idle_watch.sh    # 空闲检测守护进程
 ├── start.sh         # 单实例启动入口（flock 防重复）
 ├── install.sh       # 安装自启动项与桌面图标
@@ -145,7 +178,7 @@ wb-screensaver/
 
 项目的界面变化需要留痕。每次改动 UI 时执行以下流程：
 
-1. **保存截图**：在 Pi 上截新图。翻页时钟可用内置快照开关——启动时设 `WB_SNAP=1`，程序会在启动 3 秒后把画面写到 `/tmp/wb_snap.png`；其他屏保可用 `scrot` / `import -window root` 截屏。
+1. **保存截图**：在 Pi 上截新图。翻页时钟可用内置快照开关——启动时设 `WB_SNAP=1`，程序会在启动 3 秒后把画面写到 `/tmp/wb_snap.png`；天气面板设 `WB_SNAP_WEATHER=1` 会存到 `/tmp/wb_snap_weather.png`；其他屏保可用 `scrot` / `import -window root` 截屏。
 2. **拷回并命名**：`scp pi:/tmp/wb_snap.png img/07-简述.png`，文件名用两位序号递增 + 简短英文描述（如 `07-afterglow-toggle.png`）。
 3. **登记**：在「UI 更新记录」表格追加一行，包含图片链接、本次更新内容和日期。
 4. **提交**：截图和 README 一起 `git add` 提交，保证图片和说明同步入库。
@@ -159,7 +192,11 @@ wb-screensaver/
 - 一切基于 X11（`SDL_VIDEODRIVER=x11`），不直接写 framebuffer，因此与桌面环境共存。
 - 七段字体的「1」字形原点在单元格右侧、宽度只有其他数字的 1/5。程序读取 freetype 返回的 glyph rect，把 0-9 统一绘制到同一个单元格里，因此「1」落在右侧竖段位置，而不是贴着左边。
 - 夜间模式只缩放点亮笔画的颜色，幽灵笔画亮度固定；时间区间跨越午夜时按「大于等于开始，或小于结束」判断。
+- 天气场景与时钟跑在同一个进程、同一个窗口里，只切换绘制分支，所以没有黑帧、没有窗口重建；天气画面按「分钟 + 数据版本 + 配色」缓存成一张 480×320 表面，静态时只做一次 blit。
+- 天气图标用字体渲染而不是 PNG：`freetype` 直接按码位取字形，缩放不失真，也不用为每种天气准备图片。
 
 ## License
 
 MIT
+
+`fonts/weathericons-regular-webfont.ttf` 来自 [erikflowers/weather-icons](https://github.com/erikflowers/weather-icons)，字体以 **SIL OFL 1.1** 授权，可随本项目一起分发。

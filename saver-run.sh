@@ -1,6 +1,8 @@
 #!/bin/bash
 # Launch one screensaver, keep a global "active" marker, clean it up on exit.
-# Usage: saver-run.sh flip|matrix|stars|random
+# Usage: saver-run.sh flip|weather|matrix|stars|random
+#   flip    clock, alternating with the weather board (WB_WEATHER=0 keeps clock only)
+#   weather weather only, no clock (WB_WEATHER_ONLY=1)
 set -u
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -35,6 +37,11 @@ fi
 
 case "$name" in
     flip|clock) cmd="python3 $DIR/fliqlo.py" ;;
+    weather)
+        # Same renderer, but the clock scene is skipped entirely.
+        export WB_WEATHER_ONLY=1
+        cmd="python3 $DIR/fliqlo.py"
+        ;;
     matrix)     cmd="python3 $DIR/matrix.py" ;;
     stars)      cmd="python3 $DIR/stars.py" ;;
     random)

@@ -36,6 +36,7 @@ EOF
 }
 
 make_launcher "屏保-翻页时钟" "翻页时钟屏保" flip flip
+make_launcher "屏保-天气" "天气面板屏保" weather weather
 make_launcher "屏保-数字雨" "数字雨屏保" matrix matrix
 make_launcher "屏保-星空" "星空屏保" stars stars
 make_launcher "屏保-随机" "随机屏保" flip random
