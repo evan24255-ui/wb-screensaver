@@ -338,7 +338,6 @@ def main():
     digits = [FlapDigit(ch) for ch in "0000"]
 
     running = True
-    weather_flip = False
     weather_snap_done = False
     last_time = None
     start_time = time.monotonic()
@@ -414,16 +413,16 @@ def main():
         if board is not None and not weather_only:
             elapsed = now - scene_start
             if scene == "clock" and elapsed >= clock_seconds:
-                scene, scene_start, redraw, weather_flip = "weather", now, True, True
+                scene, scene_start, redraw = "weather", now, True
+                board.invalidate()
                 log("scene -> weather")
             elif scene == "weather" and elapsed >= weather_seconds:
                 scene, scene_start, redraw = "clock", now, True
                 log("scene -> clock")
 
         if scene == "weather" and board is not None:
-            if board.draw(screen, now) or weather_flip:
+            if board.draw(screen, now):
                 pygame.display.flip()
-                weather_flip = False
             # Force a full repaint when the clock comes back.
             redraw = True
             if os.environ.get("WB_SNAP_WEATHER") and not weather_snap_done:

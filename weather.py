@@ -545,14 +545,29 @@ class WeatherBoard:
     def _data(self):
         return self.service.snapshot() if self.service else None
 
+    def invalidate(self):
+        """Force the next draw() to repaint (used when entering the scene)."""
+        self._cache_key = None
+
     def draw(self, screen, now=None):
-        """Draw the board; returns True when the frame changed."""
-        now = time.time() if now is None else now
+        """Repaint only when the minute, the data or the colours changed.
+
+        The renderer runs at 20 fps, so the key must be stable across frames.
+        Hashing the payload (rather than id() of a fresh dict) keeps the cache
+        hot and leaves the board at a single blit instead of 20 renders/s.
+        """
         data = self._data()
+        if data:
+            signature = (
+                data.get("fetched"), data.get("temp"), data.get("feels"),
+                data.get("humidity"), data.get("cond"), data.get("tmax"),
+                data.get("tmin"), data.get("wind"), data.get("city"),
+            )
+        else:
+            signature = None
         stamp = datetime.datetime.now().strftime("%Y%m%d%H%M")
-        key = (stamp, id(data), self.fg, self.ghost, self.theme)
+        key = (stamp, signature, self.fg, self.theme)
         if key == self._cache_key and self._cache_surface is not None:
-            screen.blit(self._cache_surface, (0, 0))
             return False
         surface = self._render(data)
         self._cache_surface = surface
