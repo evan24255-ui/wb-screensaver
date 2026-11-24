@@ -55,6 +55,40 @@ ICONS = {
     "thermometer": 0xF055,
 }
 
+# ------------------------------------------------------------------ palettes
+# "dark" reproduces the reference mock pixel for pixel: near-black warm
+# background, saturated amber ink at 100 % (the screensaver's 85 % day
+# brightness is for the clock only, it made the board look muddy), dim amber
+# for secondary text and dark brown for the dashed rules.
+# "paper" is the kraft-paper mock; "paper-light" a lighter cream variant.
+PALETTES = {
+    "dark": {
+        "bg": (10, 7, 4),
+        "ink": (255, 164, 43),
+        "label": (255, 164, 43),
+        "dim": (196, 122, 30),
+        "rule": (110, 66, 16),
+        "ghost": (46, 22, 0),
+    },
+    "paper": {
+        "bg": (201, 106, 30),
+        "ink": (24, 11, 2),
+        "label": (24, 11, 2),
+        "dim": (88, 44, 10),
+        "rule": (60, 28, 8),
+        "ghost": (176, 88, 24),
+    },
+    "paper-light": {
+        "bg": (238, 222, 198),
+        "ink": (38, 24, 12),
+        "label": (128, 96, 64),
+        "dim": (128, 96, 64),
+        "rule": (162, 132, 102),
+        "ghost": (206, 186, 158),
+    },
+}
+THEMES = tuple(PALETTES)
+
 # canonical condition -> (Chinese label, icon key)
 CONDITIONS = {
     "sunny": ("晴", "sunny"),
@@ -259,6 +293,11 @@ class WeatherService(threading.Thread):
         self.lon = float(lon) if lon else None
         self.city = city
         self.data = read_cache()
+        if self.data and self.city and self.data.get("city") != self.city:
+            # The cache belongs to another city (weather.conf was edited), so its
+            # numbers would be wrong on screen. Drop it and wait for the refresh.
+            log("cache is for %r, expected %r - ignoring" % (self.data.get("city"), self.city))
+            self.data = None
         if self.data and not self.city:
             self.city = self.data.get("city", "")
         self.note = "cache" if self.data else "no data"
@@ -492,11 +531,12 @@ def dashed_round_rect(surface, rect, color, width=2, radius=12, dash=9, gap=7):
 class WeatherBoard:
     """Renders the board onto the screen; re-renders once per minute or refresh."""
 
-    def __init__(self, size, fg, ghost, theme="dark", service=None):
+    def __init__(self, size, fg, ghost, theme="dark", service=None, brightness=100):
         self.width, self.height = size
-        self.fg = fg
-        self.ghost = ghost
-        self.theme = theme
+        self.base = fg          # configured WB_COLOR, before brightness scaling
+        self.ghost = ghost      # kept for API compatibility; palettes own the ghost
+        self.brightness = max(0, min(100, brightness))
+        self.theme = theme if theme in PALETTES else "dark"
         self.service = service
         self._cache_surface = None
         self._cache_key = None
@@ -504,37 +544,52 @@ class WeatherBoard:
 
     # -- appearance
     @property
+    def colors(self):
+        """Resolved palette; the dark theme follows WB_COLOR and brightness."""
+        palette = dict(PALETTES[self.theme])
+        if self.theme == "dark":
+            scale = self.brightness / 100.0
+            ink = tuple(int(c * scale + 0.5) for c in self.base)
+            palette["ink"] = ink
+            palette["label"] = ink
+            palette["dim"] = tuple(
+                int(c * k + 0.5) for c, k in zip(ink, (0.77, 0.75, 0.70))
+            )
+            palette["rule"] = tuple(
+                int(c * k + 0.5) for c, k in zip(ink, (0.43, 0.40, 0.37))
+            )
+            palette["ghost"] = tuple(int(c * scale + 0.5) for c in (46, 22, 0))
+        return palette
+
+    @property
     def bg(self):
-        return (238, 222, 198) if self.theme == "paper" else (0, 0, 0)
+        return self.colors["bg"]
 
     @property
     def ink(self):
-        if self.theme == "paper":
-            return (38, 24, 12)
-        return self.fg
-
-    @property
-    def dim(self):
-        if self.theme == "paper":
-            return (128, 96, 64)
-        return tuple(int(c * 0.55) for c in self.fg)
-
-    @property
-    def faint(self):
-        if self.theme == "paper":
-            return (162, 132, 102)
-        return tuple(int(c * 0.34) for c in self.fg)
+        return self.colors["ink"]
 
     @property
     def ghost_color(self):
-        if self.theme == "paper":
-            return (206, 186, 158)
-        return self.ghost
+        return self.colors["ghost"]
 
-    def set_colors(self, fg, ghost):
-        if fg != self.fg or ghost != self.ghost:
-            self.fg = fg
+    def set_colors(self, fg, ghost=None):
+        if fg != self.base:
+            self.base = fg
+            self._cache_key = None
+        if ghost is not None:
             self.ghost = ghost
+
+    def set_brightness(self, brightness):
+        brightness = max(0, min(100, int(brightness)))
+        if brightness != self.brightness:
+            self.brightness = brightness
+            self._cache_key = None
+
+    def set_theme(self, theme):
+        theme = theme if theme in PALETTES else "dark"
+        if theme != self.theme:
+            self.theme = theme
             self._cache_key = None
 
     def set_service(self, service):
@@ -566,7 +621,7 @@ class WeatherBoard:
         else:
             signature = None
         stamp = datetime.datetime.now().strftime("%Y%m%d%H%M")
-        key = (stamp, signature, self.fg, self.theme)
+        key = (stamp, signature, self.theme, self.brightness, self.base)
         if key == self._cache_key and self._cache_surface is not None:
             return False
         surface = self._render(data)
@@ -577,8 +632,10 @@ class WeatherBoard:
 
     def _render(self, data):
         surface = pygame.Surface((self.width, self.height))
-        surface.fill(self.bg)
-        ink, dim, faint = self.ink, self.dim, self.faint
+        colors = self.colors
+        surface.fill(colors["bg"])
+        ink, dim, rule, label_c = colors["ink"], colors["dim"], colors["rule"], colors["label"]
+        ghost = colors["ghost"]
         pad = 14
         right = self.width - pad
 
@@ -587,17 +644,17 @@ class WeatherBoard:
         time_text = now.strftime("%H:%M")
 
         # ---- header
-        draw_text(surface, LABEL_FONT, 10, "DATE", (pad, 5), faint)
+        draw_text(surface, LABEL_FONT, 10, "DATE", (pad, 5), label_c)
         date_size = fit_size(DSEG_FONT, date_text, 236, 30, 34)
-        draw_dseg(surface, date_text, (pad, 20), date_size, ink, self.ghost_color)
+        draw_dseg(surface, date_text, (pad, 20), date_size, ink, ghost)
 
-        draw_text(surface, LABEL_FONT, 10, "TIME", (right, 5), faint, align="right")
+        draw_text(surface, LABEL_FONT, 10, "TIME", (right, 5), label_c, align="right")
         time_size = fit_size(DSEG_FONT, time_text, 110, 32, 36)
-        draw_dseg(surface, time_text, (right, 18), time_size, ink, self.ghost_color, align="right")
+        draw_dseg(surface, time_text, (right, 18), time_size, ink, ghost, align="right")
 
         # ---- dashed panel
         box = (pad, 84, 302, 252)
-        dashed_round_rect(surface, box, dim, width=2, radius=12, dash=9, gap=7)
+        dashed_round_rect(surface, box, rule, width=2, radius=12, dash=9, gap=7)
 
         cond_key = (data or {}).get("cond", "cloud")
         label, icon_key = CONDITIONS.get(cond_key, ("--", cond_key))
@@ -612,7 +669,7 @@ class WeatherBoard:
             draw_mixed(surface, "风 %d km/h" % data.get("wind", 0), (136, 206), 14, dim)
 
         # ---- right column
-        draw_text(surface, LABEL_FONT, 10, "TEMPERATURE", (right, 84), faint, align="right")
+        draw_text(surface, LABEL_FONT, 10, "TEMPERATURE", (right, 84), label_c, align="right")
         ty = 100
         unit_w, unit_h = text_size(LABEL_FONT, 14, "°C")
         num_right = right - unit_w - 4
@@ -620,13 +677,13 @@ class WeatherBoard:
             temp_text = "%d" % data["temp"]
             temp_size = fit_size(DSEG_FONT, temp_text, 92, 56, 58)
             _, th = draw_dseg(surface, temp_text, (num_right, ty), temp_size, ink,
-                              self.ghost_color, align="right")
+                              ghost, align="right")
         else:
             _, th = draw_dseg(surface, "--", (num_right, ty + 8), 52, ink,
-                              self.ghost_color, align="right")
+                              ghost, align="right")
         draw_text(surface, LABEL_FONT, 14, "°C", (num_right + 4, ty + th - unit_h), dim)
 
-        draw_text(surface, LABEL_FONT, 10, "HUMIDITY", (right, 184), faint, align="right")
+        draw_text(surface, LABEL_FONT, 10, "HUMIDITY", (right, 184), label_c, align="right")
         hy = 200
         unit2_w, unit2_h = text_size(LABEL_FONT, 11, "%RH")
         num2_right = right - unit2_w - 4
@@ -634,10 +691,10 @@ class WeatherBoard:
             hum_text = "%d" % data["humidity"]
             hum_size = fit_size(DSEG_FONT, hum_text, 76, 42, 46)
             _, hh = draw_dseg(surface, hum_text, (num2_right, hy), hum_size, ink,
-                              self.ghost_color, align="right")
+                              ghost, align="right")
         else:
             _, hh = draw_dseg(surface, "--", (num2_right, hy), 38, ink,
-                              self.ghost_color, align="right")
+                              ghost, align="right")
         draw_text(surface, LABEL_FONT, 11, "%RH", (num2_right + 4, hy + hh - unit2_h), dim)
 
         # ---- footer
@@ -651,7 +708,7 @@ class WeatherBoard:
 
         source = (data or {}).get("source", "")
         if source:
-            draw_text(surface, TEXT_FONT, 11, source, (right, 273), faint, align="right")
+            draw_text(surface, TEXT_FONT, 11, source, (right, 273), rule, align="right")
         return surface
 
 

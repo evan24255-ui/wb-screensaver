@@ -9,7 +9,7 @@
 | 屏保 | 说明 |
 |---|---|
 | 翻页时钟（Fliqlo 风格） | 复古琥珀色七段数码管、幽灵笔画、翻页动画、闪烁方形冒号，数字自动走时 |
-| 天气面板（屏保模式） | 与时钟在同一屏保内轮播：日期时间 + 天气图标 + 温度 / 湿度 / 体感 / 今日高低温 / 风 |
+| 天气面板（屏保模式） | 与时钟在同一屏保内轮播：日期时间 + 天气图标 + 温度 / 湿度 / 体感 / 今日高低温 / 风；三套配色：黑底琥珀 / 牛皮纸 / 米色纸 |
 | 数字雨（Matrix） | 绿色字符流下落 |
 | 星空（Stars） | 缓慢漂移的星点 |
 
@@ -35,6 +35,10 @@
 | ![天气面板](img/13-weather-board.png) | 新增天气面板：屏保内「时钟 20 秒 ↔ 天气 12 秒」轮播，DSEG7 数字 + Weather Icons 图标 | 2026-11-24 |
 | ![天气桌面图标](img/14-weather-desktop-icon.png) | 桌面新增「天气面板屏保」图标（单独只看天气，不轮播时钟） | 2026-11-24 |
 | ![纸感主题](img/15-weather-paper.png) | 天气面板 `WB_WEATHER_THEME=paper` 暖纸底深字主题（还原设计稿质感） | 2026-11-24 |
+| ![琥珀配色校正](img/16-weather-dark-tuned.png) | 深色主题配色校正：底色 `#0A0704`、数字与标签回到满饱和 `#FFA42B`（原按 85% 亮度渲染导致发暗发土），虚线框改深琥珀；城市改为唐山 | 2026-11-24 |
+| ![牛皮纸主题](img/17-weather-paper-kraft.png) | `paper` 主题改为与设计稿一致的牛皮纸橙底 + 墨黑字；新增 `paper-light` 米色纸主题 | 2026-11-24 |
+| ![米色纸主题](img/18-weather-paper-light.png) | `paper-light` 米色纸主题（浅暖底深褐字，适合白天常亮） | 2026-11-24 |
+| ![纸质天气图标](img/19-weather-paper-icon.png) | 桌面新增「纸质天气面板屏保」图标（牛皮纸配色，一键体验 paper 主题）；`quick_exec=1` 免去执行确认弹窗 | 2026-11-24 |
 
 > **关于游戏模拟器**：RetroArch 是独立项目，所有文件、ROM、核心、脚本、文档都在 `~/work/retroarch/`，本仓库只保留桌面图标与启动器的截图记录。游戏怎么装、怎么按键、怎么退出、怎么排错，一律看 [~/work/retroarch/README.md](../../work/retroarch/README.md)，不要在本 README 里重复。
 
@@ -76,7 +80,7 @@ bash install.sh         # 写入 LXDE 自启动项 + 桌面图标
 `install.sh` 会做两件事：
 
 1. 在 `~/.config/autostart/` 写入 `wb-flipclock-screensaver.desktop`，登录后自动启动守护进程；
-2. 在 `~/Desktop/` 创建五个启动图标：翻页时钟、天气、数字雨、星空、随机。
+2. 在 `~/Desktop/` 创建六个启动图标：翻页时钟、天气、纸质天气、数字雨、星空、随机。
 
 立即生效（无需重启）：
 
@@ -87,7 +91,7 @@ nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 ## 使用
 
 - **自动**：桌面 1 分钟无操作 → 进入默认屏保（翻页时钟，其中会轮流显示天气面板）；点一下屏幕退出。
-- **手动**：双击桌面上的屏保图标直接进入对应效果；「天气面板屏保」只显示天气，不轮播时钟；点击屏幕或按 Esc 退出。
+- **手动**：双击桌面上的屏保图标直接进入对应效果；「天气面板屏保」按 `weather.conf` 的 `THEME` 出图，「纸质天气面板屏保」固定牛皮纸主题；都只显示天气、不轮播时钟；点击屏幕或按 Esc 退出。
 
 ## 配置
 
@@ -117,7 +121,7 @@ nohup bash ~/wb-screensaver/start.sh >/dev/null 2>&1 &
 | `WB_WEATHER_ONLY` | `0` | 设 `1` 只显示天气面板（`saver-run.sh weather` 已自动设置） |
 | `WB_CLOCK_SECONDS` | `20` | 轮播中时钟画面时长（秒） |
 | `WB_WEATHER_SECONDS` | `12` | 轮播中天气面板时长（秒） |
-| `WB_WEATHER_THEME` | `dark` | 天气面板配色：`dark` 黑底琥珀（与时钟统一）、`paper` 暖纸底深字 |
+| `WB_WEATHER_THEME` | `weather.conf` 的 `THEME` | 天气面板配色：`dark` 黑底琥珀（与时钟统一）、`paper` 牛皮纸、`paper-light` 米色纸。环境变量优先于配置文件 |
 | `WB_WEATHER_PROXY` | 空 | 取 Open-Meteo 时用的 HTTP 代理（如 `http://192.168.5.200:7897`）；wttr.in 通常直连可用 |
 | `WB_SNAP_WEATHER` | 空 | 设任意值时把天气面板存成 `/tmp/wb_snap_weather.png` |
 
@@ -145,16 +149,21 @@ WB_NIGHT_START=23:30 WB_NIGHT_END=06:15 WB_NIGHT_BRIGHTNESS=35 \
 
 ```ini
 # CITY 仅用于屏幕显示；取数用 LAT/LON
-CITY=石家庄
-LAT=38.04
-LON=114.47
+# THEME 面板配色：dark / paper / paper-light
+CITY=唐山
+LAT=39.63
+LON=118.18
+THEME=dark
 ```
 
-  删掉该文件或留空时，会用 IP 定位自动补全一次并记入日志。
+  删掉该文件或留空时，会用 IP 定位自动补全一次并记入日志。改城市时 `CITY` 与 `LAT`/`LON` 一起改；缓存里若还是旧城市的数据会被忽略并重新取数，不会出现「城市名换了、温度还是别处」的情况。
 - **图标**：**Weather Icons**（erikflowers/weather-icons，字体 SIL OFL 1.1），随仓库附带 `fonts/weathericons-regular-webfont.ttf`，按 Unicode 码位渲染，不依赖网络、不需要额外图标文件。
-- **主题**：`WB_WEATHER_THEME=dark` 与时钟完全统一；`paper` 是暖纸底深字，适合单独当天气牌长时间显示。
-- **夜间模式**同步生效：22:00–07:00 天气面板与时钟一起降到 `WB_NIGHT_BRIGHTNESS`。
-- **只看天气**：双击桌面「天气面板屏保」，或执行 `./saver-run.sh weather`。
+- **主题**：三套配色，改 `weather.conf` 的 `THEME` 即换默认值（环境变量 `WB_WEATHER_THEME` 优先）：
+  - `dark`（默认）黑底 `#0A0704` + 满饱和琥珀 `#FFA42B`，与时钟同一套颜色语言；
+  - `paper` 牛皮纸橙底 `#C96A1E` + 墨黑字，还原设计稿的纸感卡片，适合当常亮天气牌；
+  - `paper-light` 米色纸 `#EEDEC6` + 深褐字，白天看最柔和。
+- **亮度**：深色主题在白天按 100% 出图（不再套用时钟的 85% 柔和亮度，避免琥珀色发暗发土），夜间 22:00–07:00 才随 `WB_NIGHT_BRIGHTNESS` 降亮；两种纸主题是浅底配色，不参与夜间降亮。
+- **只看天气**：双击桌面「天气面板屏保」（跟 `THEME`）或「纸质天气面板屏保」（固定 `paper`），也可执行 `./saver-run.sh weather` / `./saver-run.sh weather-paper`。
 
 ## 文件结构
 
@@ -162,11 +171,11 @@ LON=114.47
 wb-screensaver/
 ├── fliqlo.py        # 翻页时钟（Fliqlo 风格）+ 天气场景轮播
 ├── weather.py       # 天气面板：取数、渲染、缓存
-├── weather.conf     # 天气位置配置（CITY / LAT / LON）
+├── weather.conf     # 天气位置与主题配置（CITY / LAT / LON / THEME）
 ├── fonts/           # Weather Icons 图标字体（SIL OFL 1.1）
 ├── matrix.py        # 数字雨
 ├── stars.py         # 星空
-├── saver-run.sh     # 统一启动器：flip|weather|matrix|stars|random
+├── saver-run.sh     # 统一启动器：flip|weather|weather-paper|matrix|stars|random
 ├── idle_watch.sh    # 空闲检测守护进程
 ├── start.sh         # 单实例启动入口（flock 防重复）
 ├── install.sh       # 安装自启动项与桌面图标
@@ -195,6 +204,7 @@ wb-screensaver/
 - 夜间模式只缩放点亮笔画的颜色，幽灵笔画亮度固定；时间区间跨越午夜时按「大于等于开始，或小于结束」判断。
 - 天气场景与时钟跑在同一个进程、同一个窗口里，只切换绘制分支，所以没有黑帧、没有窗口重建；天气画面按「分钟 + 数据版本 + 配色」缓存成一张 480×320 表面，静态时只做一次 blit。
 - 天气图标用字体渲染而不是 PNG：`freetype` 直接按码位取字形，缩放不失真，也不用为每种天气准备图片。
+- 天气面板的配色集中在 `weather.py` 的 `PALETTES`：每套主题只是一组 `bg / ink / label / dim / rule / ghost`，渲染函数不认主题名，所以加主题只加一条字典。深色主题的 `dim`、`rule` 由主色按比例推出，`WB_COLOR` 改了它也跟着变。
 
 ## License
 

@@ -48,4 +48,12 @@ gf = ImageFont.truetype(WEATHER_FONT, 46)
 d.text((9, 4), "\uf002", font=gf, fill=(255, 164, 43))
 im.save(os.path.join(OUT, "weather.png"))
 
+# Weather (paper): same glyph in ink on a kraft-paper card.
+im = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+d = ImageDraw.Draw(im)
+d.rounded_rectangle((3, 3, 60, 60), radius=10, fill=(201, 106, 30),
+                    outline=(60, 28, 8), width=2)
+d.text((9, 4), "\uf002", font=gf, fill=(24, 11, 2))
+im.save(os.path.join(OUT, "weather-paper.png"))
+
 print("icons written to", OUT)

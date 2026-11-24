@@ -294,14 +294,21 @@ def main():
         try:
             weather_service = weather_mod.WeatherService()
             weather_service.start()
+            # Theme precedence: environment, then weather.conf, then dark.
+            theme = (os.environ.get("WB_WEATHER_THEME", "") or "").strip().lower()
+            if not theme:
+                theme = (weather_mod.load_conf().get("THEME", "") or "dark").strip().lower()
+            # The board renders at full colour in daylight, exactly like the
+            # reference mock; only night mode scales it down.
             board = weather_mod.WeatherBoard(
                 (width, height),
-                FG,
+                base,
                 GHOST,
-                theme=os.environ.get("WB_WEATHER_THEME", "dark"),
+                theme=theme,
                 service=weather_service,
+                brightness=100 if period == "day" else night_brightness,
             )
-            log("weather scene enabled (only=%s)" % weather_only)
+            log("weather scene enabled (only=%s theme=%s)" % (weather_only, board.theme))
         except Exception as exc:
             log("weather scene disabled: %r" % exc)
             board = None
@@ -373,7 +380,8 @@ def main():
             render_ghost_cache(font_store)
             redraw = True
             if board is not None:
-                board.set_colors(FG, GHOST)
+                board.set_colors(base, GHOST)
+                board.set_brightness(100 if period == "day" else night_brightness)
             log("period -> %s fg=%s brightness=%d" % (period, FG, active_brightness))
 
         blink_on = (not blink_enabled) or (int(now * 1000) // blink_ms) % 2 == 0
