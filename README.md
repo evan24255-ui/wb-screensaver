@@ -37,6 +37,8 @@
 > **手柄热键（没有键盘也能操作）**：`Select`（按键 8）是修饰键，需与另一个键同时按。
 > `Select+Start` 打开/关闭 Quick Menu；`Select+L` 连按两次退出 RetroArch 回桌面；`Select+R` 即时存档；`Select+Y` 读档；`Select+X` 软复位；`Select+A` 切换存档位。
 > 完整按键表与排错见 [~/work/retroarch/README.md](../../work/retroarch/README.md)。NES 本体只有 A/B/Select/Start，所以 L/R 在 NES 游戏里本来就没有功能，并非映射缺失。
+>
+> **游戏卡死**：在终端执行 `~/work/retroarch/kill-game.sh`（先 SIGTERM，3 秒不退再 SIGKILL，并自动清理屏保标记、恢复屏保守护）。脚本源码见 `tools/kill-game.sh`，`-n` 可先预览要杀哪些进程，`-f` 直接强杀。
 
 > **维护约定**：新增或修改 UI 时，先在 Pi 上用 `WB_SNAP=1`（时钟）或截图工具保存新图，按 `img/序号-简述.png` 命名，再在上表追加一行。详见下方「截图归档」一节。
 
