@@ -30,17 +30,11 @@
 | ![游戏桌面图标](img/09-game-desktop-icon.png) | 新增「游戏模拟器」桌面图标，双击即全屏启动（含手柄图标） | 2026-11-24 |
 | ![手柄映射](img/10-gamepad-mapping.png) | 修复手柄方向键：D-pad 是轴（`ABS=3`）非 hat，改用 axis 映射；附按键测试器 | 2026-11-24 |
 | ![游戏运行](img/11-action53-running.png) | 装入 Action53 54 合 1 合集 + 开源 homebrew，装 mesen 核心支持 mapper 218；修复游戏中途弹屏保的 bug | 2026-11-24 |
-| ![100合1图标](img/12-100in1-icon.png) | 新增「100合1」桌面图标；Nestopia 启动、手柄显式映射、关闭 vsync；rom-500 按平台分类到 `roms/nes`、`roms/snes`、`roms/md` | 2026-11-24 |
+| ![100合1图标](img/12-100in1-icon.png) | 桌面新增「100合1」图标（双击用 Nestopia 直接进 100 合 1 合集） | 2026-11-24 |
 
-> **关于游戏模拟器**：RetroArch 及所有相关文件都放在 `~/work/retroarch/` 子目录（不污染 `~/work` 根目录），与本项目分开。桌面双击「游戏模拟器」图标即可全屏启动（推荐）；也可用 LXDE 应用程序菜单的「RetroArch (SPI 480x320)」或直接敲 `retroarch`。命令行方式见 [~/work/retroarch/README.md](../../work/retroarch/README.md)。
+> **关于游戏模拟器**：RetroArch 是独立项目，所有文件、ROM、核心、脚本、文档都在 `~/work/retroarch/`，本仓库只保留桌面图标与启动器的截图记录。游戏怎么装、怎么按键、怎么退出、怎么排错，一律看 [~/work/retroarch/README.md](../../work/retroarch/README.md)，不要在本 README 里重复。
 
-> **手柄热键（没有键盘也能操作）**：`Select`（按键 8）是修饰键，需与另一个键同时按。
-> `Select+Start` 打开/关闭 Quick Menu；`Select+L` 连按两次退出 RetroArch 回桌面；`Select+R` 即时存档；`Select+Y` 读档；`Select+X` 软复位；`Select+A` 切换存档位。
-> 完整按键表与排错见 [~/work/retroarch/README.md](../../work/retroarch/README.md)。NES 本体只有 A/B/Select/Start，所以 L/R 在 NES 游戏里本来就没有功能，并非映射缺失。
->
-> **游戏卡死**：在终端执行 `~/work/retroarch/kill-game.sh`（先 SIGTERM，3 秒不退再 SIGKILL，并自动清理屏保标记、恢复屏保守护）。脚本源码见 `tools/kill-game.sh`，`-n` 可先预览要杀哪些进程，`-f` 直接强杀。
-
-> **维护约定**：新增或修改 UI 时，先在 Pi 上用 `WB_SNAP=1`（时钟）或截图工具保存新图，按 `img/序号-简述.png` 命名，再在上表追加一行。详见下方「截图归档」一节。
+> **维护约定**：新增或修改 UI 时，先在 Pi 上用 `WB_SNAP=1`（时钟）或截图工具保存新图，按 `img/序号-简述.png` 命名，再在上表追加一行。详见下方「截图归档」一节。本表只记屏保与桌面（480×320 屏幕）的可见变化；游戏模拟器内部的功能、按键、核心、ROM 变更不记在这里，归 `~/work/retroarch/README.md`。
 
 ## 功能特性
 
